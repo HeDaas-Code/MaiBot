@@ -133,7 +133,10 @@ class EventAnalysisPayload(BaseModel):
         # 事件分析本身针对已收录事件的证据；空数组是模型常见的“未提供”，不是“不相关”。
         if not isinstance(normalized.get("related"), bool):
             normalized["related"] = str(normalized.get("related", "")).strip().lower() not in {
-                "false", "no", "0", "unrelated"
+                "false",
+                "no",
+                "0",
+                "unrelated",
             }
         return normalized
 
@@ -347,7 +350,18 @@ class GroupEventService:
             ).all()
         result: list[EventMessageSnapshot] = []
         for row in rows:
-            message_id, session_id, platform, account_id, scope, group_id, group_name, user_id, timestamp, plain_text = row
+            (
+                message_id,
+                session_id,
+                platform,
+                account_id,
+                scope,
+                group_id,
+                group_name,
+                user_id,
+                timestamp,
+                plain_text,
+            ) = row
             if is_bot_self(platform, user_id):
                 continue
             text = " ".join(str(plain_text or "").split()).strip()
@@ -436,7 +450,9 @@ class GroupEventService:
         source_lines: list[str] = []
         for index, message in enumerate(messages):
             alias = speaker_aliases.setdefault(message.speaker_key, f"发言者{len(speaker_aliases) + 1}")
-            source_lines.append(f"[{index}] {message.timestamp.isoformat()} {alias}: {message.text[:EVENT_MAX_SNAPSHOT_CHARS]}")
+            source_lines.append(
+                f"[{index}] {message.timestamp.isoformat()} {alias}: {message.text[:EVENT_MAX_SNAPSHOT_CHARS]}"
+            )
         prompt = (
             "你是群聊事件候选聚类器。仅将明确讨论同一现实事件/议题的消息放入同一簇；"
             "不要把一般闲聊、同类但不同的事件合并。只输出 JSON：clusters=[{title,root_cause,source_indices,confidence}]。"
@@ -516,8 +532,7 @@ class GroupEventService:
                     for index, event in enumerate(events)
                 )
                 evidence = "\n".join(
-                    f"- {message.timestamp.isoformat()}: {message.text[:240]}"
-                    for message in cluster_messages[:12]
+                    f"- {message.timestamp.isoformat()}: {message.text[:240]}" for message in cluster_messages[:12]
                 )
                 prompt = (
                     "将新候选事件与给定的活跃档案逐一比对。一个具体现实事件即使标题措辞不同、在同一群或不同群讨论，"
@@ -531,7 +546,8 @@ class GroupEventService:
                 if "matches" in raw_match:
                     parsed = EventCanonicalMatchPayload.model_validate(raw_match)
                     matches = [
-                        match for match in parsed.matches
+                        match
+                        for match in parsed.matches
                         if 0 <= match.event_index < len(events)
                         and math.isfinite(match.confidence)
                         and match.confidence >= EVENT_CANONICAL_MATCH_THRESHOLD
@@ -590,7 +606,8 @@ class GroupEventService:
                     async with self._canonicalization_lock:
                         current_events = await asyncio.to_thread(self._load_active_canonical_events)
                         active_scope_events = [
-                            event for event in current_events
+                            event
+                            for event in current_events
                             if (event.platform, str(event.account_id or ""), str(event.scope or "")) == scope_key
                         ]
                         seed_event = next(
@@ -600,7 +617,8 @@ class GroupEventService:
                         if seed_event is None or seed_event.event_id in processed_event_ids:
                             continue
                         candidates = [
-                            event for event in active_scope_events
+                            event
+                            for event in active_scope_events
                             if event.event_id != seed_event.event_id and event.event_id not in processed_event_ids
                         ]
                         processed_event_ids.add(seed_event.event_id)
@@ -641,15 +659,15 @@ class GroupEventService:
                             continue
                         merged_set = [seed_event, *matched_events]
                         canonical = await asyncio.to_thread(self._select_canonical_event, merged_set)
-                        duplicate_ids = [
-                            event.event_id for event in merged_set if event.event_id != canonical.event_id
-                        ]
+                        duplicate_ids = [event.event_id for event in merged_set if event.event_id != canonical.event_id]
                         await asyncio.to_thread(self._merge_duplicate_events, canonical.event_id, duplicate_ids)
                         await self._schedule_analysis(canonical.event_id)
                         processed_event_ids.update(event.event_id for event in matched_events)
                         reconciled_count += len(duplicate_ids)
 
-            logger.info("群聊事件历史归一完成: active_event_count=%s merged_event_count=%s", len(events), reconciled_count)
+            logger.info(
+                "群聊事件历史归一完成: active_event_count=%s merged_event_count=%s", len(events), reconciled_count
+            )
         except asyncio.CancelledError:
             raise
         except Exception:
@@ -663,15 +681,15 @@ class GroupEventService:
                     select(GroupEvent)
                     .where(GroupEvent.canonical_event_id.is_(None))
                     .where(GroupEvent.status.in_(["collecting", "reviewing", "ready_for_stance", "stance_active"]))
-                    .where(GroupEvent.last_activity_at >= datetime.now() - timedelta(seconds=EVENT_ARCHIVE_AFTER_SECONDS))
+                    .where(
+                        GroupEvent.last_activity_at >= datetime.now() - timedelta(seconds=EVENT_ARCHIVE_AFTER_SECONDS)
+                    )
                     .order_by(GroupEvent.created_at)
                 ).all()
             )
 
     @staticmethod
-    def _find_exact_signature_matches(
-        events: list[GroupEvent], cluster: EventCluster
-    ) -> list[EventCanonicalMatch]:
+    def _find_exact_signature_matches(events: list[GroupEvent], cluster: EventCluster) -> list[EventCanonicalMatch]:
         """在 LLM 判断前识别标题和根因均完全一致的重复候选。"""
 
         def normalize(value: str) -> str:
@@ -747,9 +765,9 @@ class GroupEventService:
             counts = {
                 event.event_id: int(
                     session.exec(
-                        select(func.count()).select_from(GroupEventSource).where(
-                            GroupEventSource.event_id == event.event_id
-                        )
+                        select(func.count())
+                        .select_from(GroupEventSource)
+                        .where(GroupEventSource.event_id == event.event_id)
                     ).one()
                 )
                 for event in events
@@ -773,9 +791,11 @@ class GroupEventService:
             if canonical is None:
                 raise ValueError(f"规范事件不存在: {canonical_event_id}")
 
-            stance_records = {
-                (canonical.stance_type, canonical.stance_summary.strip())
-            } if canonical.stance_summary.strip() else set()
+            stance_records = (
+                {(canonical.stance_type, canonical.stance_summary.strip())}
+                if canonical.stance_summary.strip()
+                else set()
+            )
             for duplicate_event_id in duplicate_event_ids:
                 duplicate = session.get(GroupEvent, duplicate_event_id)
                 if duplicate is None or duplicate.canonical_event_id is not None:
@@ -815,7 +835,9 @@ class GroupEventService:
                         session.add(group)
                         canonical_groups[group.session_id] = group
                     else:
-                        existing_group.first_activity_at = min(existing_group.first_activity_at, group.first_activity_at)
+                        existing_group.first_activity_at = min(
+                            existing_group.first_activity_at, group.first_activity_at
+                        )
                         existing_group.last_activity_at = max(existing_group.last_activity_at, group.last_activity_at)
                         if group.group_name:
                             existing_group.group_name = group.group_name
@@ -1015,7 +1037,9 @@ class GroupEventService:
             return
         task = asyncio.create_task(self._analyze_event(event_id), name=f"group_event_analysis:{event_id}")
         self._analysis_tasks.add(task)
-        task.add_done_callback(lambda completed, active_event_id=event_id: self._analysis_finished(active_event_id, completed))
+        task.add_done_callback(
+            lambda completed, active_event_id=event_id: self._analysis_finished(active_event_id, completed)
+        )
 
     def _analysis_finished(self, event_id: str, task: asyncio.Task[None]) -> None:
         self._analysis_tasks.discard(task)
@@ -1052,7 +1076,11 @@ class GroupEventService:
                 source_id_map[index] = row.id or 0
                 source_lines.append(f"[{index}] {row.timestamp.isoformat()} {group_alias}/{alias}: {row.text_snapshot}")
             current_event = await asyncio.to_thread(self._get_event, event_id)
-            current_stance = current_event.stance_summary if current_event is not None and current_event.stance_summary else "尚未确认"
+            current_stance = (
+                current_event.stance_summary
+                if current_event is not None and current_event.stance_summary
+                else "尚未确认"
+            )
             prompt = (
                 "你是群聊事件档案分析器。请只依据证据整理同一事件，区分事实、各方说法和未知信息。"
                 "不应输出成员身份或来源群原文给 Planner。只输出 JSON 对象，字段类型必须严格为：title(string)、"
@@ -1066,7 +1094,8 @@ class GroupEventService:
                 "material_evidence 仅当新消息带来此前分析中没有的关键事实/论据时为 true；"
                 "major_counter_evidence 仅在既有立场受到有来源的重大反证时为 true。"
                 + f"\n事件现有立场：{current_stance}"
-                + "\n消息证据：\n" + "\n".join(source_lines)
+                + "\n消息证据：\n"
+                + "\n".join(source_lines)
             )
             try:
                 raw = await self._request_json(prompt, max_tokens=8192)
@@ -1091,6 +1120,7 @@ class GroupEventService:
 
     def _save_analysis(self, event_id: str, payload: EventAnalysisPayload, source_id_map: dict[int, int]) -> None:
         now = datetime.now()
+
         def normalize(items: list[dict[str, Any]]) -> list[dict[str, Any]]:
             normalized: list[dict[str, Any]] = []
             for item in items:
@@ -1179,9 +1209,7 @@ class GroupEventService:
         now = datetime.now()
         with get_db_session() as session:
             events = session.exec(
-                select(GroupEvent).where(
-                    GroupEvent.status.notin_(["archived", "archived_incomplete", "merged"])
-                )
+                select(GroupEvent).where(GroupEvent.status.notin_(["archived", "archived_incomplete", "merged"]))
             ).all()
             for event in events:
                 if (now - event.last_activity_at).total_seconds() >= EVENT_ARCHIVE_AFTER_SECONDS:
@@ -1294,9 +1322,7 @@ class GroupEventService:
         elif event.status == "stance_active":
             state_hint = f"事件当前立场：{event.stance_summary}。理由：{event.stance_reasoning}。除非状态重开为 reviewing，不要改变立场。"
         safe_timeline = [
-            str(item.get("summary") or item.get("event") or "").strip()
-            for item in timeline
-            if isinstance(item, dict)
+            str(item.get("summary") or item.get("event") or "").strip() for item in timeline if isinstance(item, dict)
         ]
         safe_viewpoints = [
             {
@@ -1322,7 +1348,9 @@ class GroupEventService:
         if analysis.get("uncertainties"):
             sections.append("仍待核实：" + "；".join(str(item) for item in analysis["uncertainties"][:8])[:800])
         sections.extend([state_hint, "该摘要不包含其他群原文、群名或成员身份。"])
-        return EventContext(event.event_id, event.status, event.title, event.stance_type, event.stance_summary, "\n".join(sections))
+        return EventContext(
+            event.event_id, event.status, event.title, event.stance_type, event.stance_summary, "\n".join(sections)
+        )
 
     async def confirm_stance(
         self,
@@ -1362,7 +1390,9 @@ class GroupEventService:
             return True
 
     async def _review_related_text(self, contexts: list[EventContext], text: str) -> str:
-        collecting = [context for context in contexts if context.status in {"collecting", "ready_for_stance", "reviewing"}]
+        collecting = [
+            context for context in contexts if context.status in {"collecting", "ready_for_stance", "reviewing"}
+        ]
         active = [context for context in contexts if context.status == "stance_active"]
         if collecting and _STANCE_WORDS.search(text):
             return _NEUTRAL_FALLBACK

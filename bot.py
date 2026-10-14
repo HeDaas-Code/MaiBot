@@ -279,9 +279,7 @@ async def graceful_shutdown(main_system: MainSystem | None = None) -> bool:
         )
 
         success = (
-            await _await_shutdown_step(
-                get_group_event_service().stop(), timeout=5.0, step_name="停止群聊事件跟踪器"
-            )
+            await _await_shutdown_step(get_group_event_service().stop(), timeout=5.0, step_name="停止群聊事件跟踪器")
             and success
         )
 

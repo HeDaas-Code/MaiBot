@@ -176,30 +176,63 @@ def test_duplicate_event_merge_moves_unique_sources_and_group_links(monkeypatch,
                 canonical,
                 duplicate,
                 GroupEventGroup(
-                    event_id="canonical", session_id="session-0", group_id="group-0", group_name="旧群名",
-                    first_activity_at=first_seen, last_activity_at=first_seen,
+                    event_id="canonical",
+                    session_id="session-0",
+                    group_id="group-0",
+                    group_name="旧群名",
+                    first_activity_at=first_seen,
+                    last_activity_at=first_seen,
                 ),
                 GroupEventGroup(
-                    event_id="duplicate", session_id="session-0", group_id="group-0", group_name="测试群",
-                    first_activity_at=last_seen, last_activity_at=last_seen,
+                    event_id="duplicate",
+                    session_id="session-0",
+                    group_id="group-0",
+                    group_name="测试群",
+                    first_activity_at=last_seen,
+                    last_activity_at=last_seen,
                 ),
                 GroupEventGroup(
-                    event_id="duplicate", session_id="session-1", group_id="group-1", group_name="另一个群",
-                    first_activity_at=first_seen, last_activity_at=last_seen,
+                    event_id="duplicate",
+                    session_id="session-1",
+                    group_id="group-1",
+                    group_name="另一个群",
+                    first_activity_at=first_seen,
+                    last_activity_at=last_seen,
                 ),
                 GroupEventSource(
-                    event_id="canonical", session_id="session-0", platform="test", account_id="bot", scope="default",
-                    group_id="group-0", message_id="shared-message", timestamp=first_seen, speaker_key="speaker-1",
+                    event_id="canonical",
+                    session_id="session-0",
+                    platform="test",
+                    account_id="bot",
+                    scope="default",
+                    group_id="group-0",
+                    message_id="shared-message",
+                    timestamp=first_seen,
+                    speaker_key="speaker-1",
                     text_snapshot="共有来源",
                 ),
                 GroupEventSource(
-                    event_id="duplicate", session_id="session-0", platform="test", account_id="bot", scope="default",
-                    group_id="group-0", message_id="shared-message", timestamp=last_seen, speaker_key="speaker-1",
+                    event_id="duplicate",
+                    session_id="session-0",
+                    platform="test",
+                    account_id="bot",
+                    scope="default",
+                    group_id="group-0",
+                    message_id="shared-message",
+                    timestamp=last_seen,
+                    speaker_key="speaker-1",
                     text_snapshot="重复来源",
                 ),
                 GroupEventSource(
-                    event_id="duplicate", session_id="session-1", platform="test", account_id="bot", scope="default",
-                    group_id="group-1", message_id="new-message", timestamp=last_seen, speaker_key="speaker-2",
+                    event_id="duplicate",
+                    session_id="session-1",
+                    platform="test",
+                    account_id="bot",
+                    scope="default",
+                    group_id="group-1",
+                    message_id="new-message",
+                    timestamp=last_seen,
+                    speaker_key="speaker-2",
                     text_snapshot="新增证据",
                 ),
             ]
@@ -316,7 +349,9 @@ def test_matching_multiple_duplicate_archives_merges_to_one_canonical(monkeypatc
     monkeypatch.setattr(service, "_select_canonical_event", lambda events: events[0])
     merged = []
     refreshed = []
-    monkeypatch.setattr(service, "_merge_duplicate_events", lambda canonical_id, ids: merged.append((canonical_id, ids)))
+    monkeypatch.setattr(
+        service, "_merge_duplicate_events", lambda canonical_id, ids: merged.append((canonical_id, ids))
+    )
     monkeypatch.setattr(service, "_refresh_canonical_event", lambda event_id, cluster: refreshed.append(event_id))
 
     result = asyncio.run(
@@ -337,23 +372,42 @@ def test_startup_reconciliation_merges_only_matching_scope(monkeypatch) -> None:
 
     service = GroupEventService()
     first = SimpleNamespace(
-        event_id="event:first", platform="test", account_id="bot", scope="route-a",
-        title="规范事件", root_cause="规范起因", analysis_json="{}",
+        event_id="event:first",
+        platform="test",
+        account_id="bot",
+        scope="route-a",
+        title="规范事件",
+        root_cause="规范起因",
+        analysis_json="{}",
     )
     duplicate = SimpleNamespace(
-        event_id="event:duplicate", platform="test", account_id="bot", scope="route-a",
-        title="规范事件", root_cause="规范起因", analysis_json="{}",
+        event_id="event:duplicate",
+        platform="test",
+        account_id="bot",
+        scope="route-a",
+        title="规范事件",
+        root_cause="规范起因",
+        analysis_json="{}",
     )
     unrelated_scope = SimpleNamespace(
-        event_id="event:other-scope", platform="test", account_id="bot", scope="route-b",
-        title="规范事件", root_cause="规范起因", analysis_json="{}",
+        event_id="event:other-scope",
+        platform="test",
+        account_id="bot",
+        scope="route-b",
+        title="规范事件",
+        root_cause="规范起因",
+        analysis_json="{}",
     )
     monkeypatch.setattr(service, "_load_active_canonical_events", lambda: [first, duplicate, unrelated_scope])
     monkeypatch.setattr(service, "_load_sources", lambda event_id: [])
-    monkeypatch.setattr(service, "_match_existing_events", lambda cluster, sources, candidates: _resolved(candidates[:1]))
+    monkeypatch.setattr(
+        service, "_match_existing_events", lambda cluster, sources, candidates: _resolved(candidates[:1])
+    )
     monkeypatch.setattr(service, "_select_canonical_event", lambda events: events[0])
     merges = []
-    monkeypatch.setattr(service, "_merge_duplicate_events", lambda canonical_id, ids: merges.append((canonical_id, ids)))
+    monkeypatch.setattr(
+        service, "_merge_duplicate_events", lambda canonical_id, ids: merges.append((canonical_id, ids))
+    )
     monkeypatch.setattr(service, "_schedule_analysis", lambda event_id: _resolved(None))
 
     asyncio.run(service._reconcile_existing_duplicates())

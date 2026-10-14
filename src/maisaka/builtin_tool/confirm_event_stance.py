@@ -48,11 +48,7 @@ async def handle_tool(
     service = get_group_event_service()
     arguments = invocation.arguments or {}
     event_id = str(arguments.get("event_id") or "").strip()
-    trigger_message_id = (
-        tool_ctx.runtime.message_cache[-1].message_id
-        if tool_ctx.runtime.message_cache
-        else ""
-    )
+    trigger_message_id = tool_ctx.runtime.message_cache[-1].message_id if tool_ctx.runtime.message_cache else ""
     contexts = await service.get_contexts_for_source(
         tool_ctx.runtime.session_id,
         str(trigger_message_id or ""),
