@@ -1094,7 +1094,17 @@ class MaisakaHeartFlowChatting(MaisakaFocusRuntimeMixin, MaisakaRuntimeDisplayMi
         )
         if talk_value <= 0:
             return 0.0
-        return max(0.0, talk_value * self._talk_frequency_adjust)
+        routine_multiplier = 1.0
+        if global_config.daily_routine.enabled:
+            from src.services.daily_routine_service import get_daily_routine_service
+
+            routine_multiplier = get_daily_routine_service().get_turn_policy_sync(
+                self.chat_stream.platform,
+                self.chat_stream.account_id,
+                is_group_chat=self.chat_stream.is_group_session,
+                forced=self._has_forced_turn_trigger(),
+            ).multiplier
+        return max(0.0, talk_value * self._talk_frequency_adjust * routine_multiplier)
 
     @staticmethod
     def _format_reply_frequency_for_display(frequency: float) -> str:

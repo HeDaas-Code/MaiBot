@@ -487,6 +487,15 @@ class ModelTaskConfig(ConfigBase):
     )
     """群聊事件聚类、证据整理和中立/立场一致性审核模型；留空时继用 utils 模型。"""
 
+    daily_routine: TaskConfig = Field(
+        default_factory=TaskConfig,
+        json_schema_extra={
+            "x-widget": "custom",
+            "advanced": True,
+        },
+    )
+    """日程短文章和兴趣活动知识整理模型；留空时继用 utils 模型。"""
+
     utils: TaskConfig = Field(
         default_factory=TaskConfig,
         json_schema_extra={

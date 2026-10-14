@@ -835,6 +835,120 @@ class ChatConfig(ConfigBase):
     """如何回复、引用回复与聊天 Prompt 配置。"""
 
 
+class DailyRoutineConfig(ConfigBase):
+    """机器人账号级日程运行时配置。"""
+
+    __ui_label__ = "日程与日常感"
+    __ui_order__ = 25
+    __ui_advanced__ = True
+
+    enabled: bool = Field(
+        default=True,
+        json_schema_extra={
+            "label": {"zh_CN": "启用日程运行时", "en_US": "Enable daily routine", "ja_JP": "日課ランタイムを有効化"},
+            "x-widget": "switch",
+        },
+    )
+    timezone: str = Field(
+        default="Asia/Shanghai",
+        json_schema_extra={
+            "label": {"zh_CN": "日程时区", "en_US": "Routine timezone", "ja_JP": "日課のタイムゾーン"},
+            "x-widget": "input",
+        },
+    )
+    tick_seconds: int = Field(
+        default=60,
+        ge=30,
+        le=3600,
+        json_schema_extra={
+            "label": {"zh_CN": "后台检查间隔", "en_US": "Routine tick interval", "ja_JP": "日課チェック間隔"},
+            "x-widget": "input",
+        },
+    )
+    draft_interval_minutes: int = Field(
+        default=90,
+        ge=15,
+        le=1440,
+        json_schema_extra={
+            "label": {"zh_CN": "短文章生成间隔", "en_US": "Draft generation interval", "ja_JP": "下書き生成間隔"},
+            "x-widget": "input",
+        },
+    )
+    daily_draft_budget: int = Field(
+        default=3,
+        ge=0,
+        le=24,
+        json_schema_extra={
+            "label": {"zh_CN": "每日草稿预算", "en_US": "Daily draft budget", "ja_JP": "1日の下書き上限"},
+            "x-widget": "input",
+        },
+    )
+    draft_retention_days: int = Field(
+        default=14,
+        ge=1,
+        le=365,
+        json_schema_extra={
+            "label": {"zh_CN": "草稿保留天数", "en_US": "Draft retention days", "ja_JP": "下書き保存日数"},
+            "x-widget": "input",
+        },
+    )
+    interest_probability: float = Field(
+        default=0.45,
+        ge=0,
+        le=1,
+        json_schema_extra={
+            "label": {"zh_CN": "兴趣活动概率", "en_US": "Interest activity probability", "ja_JP": "興味活動の確率"},
+            "x-widget": "slider",
+            "step": 0.05,
+        },
+    )
+    min_reply_multiplier: float = Field(
+        default=0.05,
+        ge=0,
+        le=1,
+        json_schema_extra={
+            "label": {"zh_CN": "最低回复影响系数", "en_US": "Minimum reply multiplier", "ja_JP": "返信影響係数の下限"},
+            "x-widget": "slider",
+            "step": 0.05,
+        },
+    )
+    max_reply_multiplier: float = Field(
+        default=1.0,
+        ge=0,
+        le=1,
+        json_schema_extra={
+            "label": {"zh_CN": "最高回复影响系数", "en_US": "Maximum reply multiplier", "ja_JP": "返信影響係数の上限"},
+            "x-widget": "slider",
+            "step": 0.05,
+        },
+    )
+    generation_timeout_seconds: int = Field(
+        default=120,
+        ge=10,
+        le=600,
+        json_schema_extra={
+            "label": {"zh_CN": "内容生成超时", "en_US": "Generation timeout", "ja_JP": "生成タイムアウト"},
+            "x-widget": "input",
+            "advanced": True,
+        },
+    )
+    max_generation_concurrency: int = Field(
+        default=1,
+        ge=1,
+        le=4,
+        json_schema_extra={
+            "label": {"zh_CN": "内容生成并发数", "en_US": "Generation concurrency", "ja_JP": "生成同時実行数"},
+            "x-widget": "input",
+            "advanced": True,
+        },
+    )
+
+    def model_post_init(self, context: Optional[dict] = None) -> None:
+        if self.max_reply_multiplier < self.min_reply_multiplier:
+            raise ValueError("日程最高回复影响系数不能小于最低回复影响系数")
+        super().model_post_init(context)
+
+
 class AttentionDriftConfig(ConfigBase):
     """注意力漂移实验功能配置。"""
 

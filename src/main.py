@@ -121,9 +121,11 @@ class MainSystem:
         """初始化其他组件"""
         init_start_time = time.time()
 
+        from src.services.daily_routine_runtime import get_daily_routine_runtime
         from src.services.group_event_service import get_group_event_service
 
         get_group_event_service().start()
+        await get_daily_routine_runtime().start()
         await config_manager.start_file_watcher()
 
         # 插件 Runner 启动最重，尽早发起以便和后续初始化并行。
@@ -288,6 +290,7 @@ async def main() -> None:
         from src.emoji_system.emoji_manager import emoji_manager
         from src.mcp_module.service import get_mcp_service
         from src.plugin_runtime.integration import get_plugin_runtime_manager
+        from src.services.daily_routine_runtime import get_daily_routine_runtime
         from src.services.expression_vector_service import expression_vector_service
         from src.services.group_event_service import get_group_event_service
         from src.services.memory_flow_service import memory_automation_service
@@ -295,6 +298,7 @@ async def main() -> None:
         emoji_manager.shutdown()
         await image_manager.shutdown()
         await expression_vector_service.stop()
+        await get_daily_routine_runtime().stop()
         await get_group_event_service().stop()
         await memory_automation_service.shutdown()
         await a_memorix_host_service.stop()

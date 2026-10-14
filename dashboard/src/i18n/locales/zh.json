@@ -92,7 +92,9 @@
       "reasoningProcess": "推理过程",
       "maisakaMonitor": "麦麦观察",
       "localChat": "本地聊天室",
-      "settings": "WEBUI设置"
+      "settings": "WEBUI设置",
+      "dailyRoutine": "日常日程",
+      "dailyRoutineDesc": "查看机器人账号级日程状态、活动时间线和内部草稿"
     }
   },
   "groupEvents": {
@@ -1651,5 +1653,20 @@
     "mobileTextEmpty": "未填写",
     "mobileTextCancel": "取消",
     "mobileTextDone": "完成"
+  },
+  "dailyRoutine": {
+    "title": "日常日程",
+    "description": "机器人账号级日程状态、活动时间线和不发送的日常草稿。",
+    "refresh": "刷新",
+    "loading": "加载中…",
+    "disabled": "日程运行时未启用",
+    "noAccounts": "暂无已加载的机器人账号",
+    "defaultAccount": "默认账号",
+    "interactions": "互动 {{count}} 次",
+    "timeline": "今日活动时间线",
+    "drafts": "内部草稿",
+    "untitled": "未命名草稿",
+    "noDrafts": "暂无未过期草稿",
+    "loadFailed": "加载日程失败"
   }
 }

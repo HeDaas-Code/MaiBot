@@ -90,6 +90,12 @@ const groupEventsRoute = createRoute({
   component: lazyRouteComponent(() => import('./routes/group-events'), 'GroupEventsPage'),
 })
 
+const dailyRoutineRoute = createRoute({
+  getParentRoute: () => protectedRoute,
+  path: '/daily-routine',
+  component: lazyRouteComponent(() => import('./routes/daily-routine'), 'DailyRoutinePage'),
+})
+
 const replyEffectsRoute = createRoute({
   getParentRoute: () => protectedRoute,
   path: '/reply-effects',
@@ -388,6 +394,7 @@ const routeTree = rootRoute.addChildren([
     statisticsRoute,
     replyEffectsRoute,
     groupEventsRoute,
+    dailyRoutineRoute,
     botConfigRoute,
     modelConfigRoute,
     promptManagementRoute,

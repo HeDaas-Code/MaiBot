@@ -61,9 +61,11 @@ class HeartFCMessageReceiver:
             await MessageUtils.store_message_to_db_async(message)  # 存储消息到数据库
             if chat is not None:
                 await chat.register_message(message)
+            from src.services.daily_routine_service import get_daily_routine_service
             from src.services.group_event_service import get_group_event_service
             from src.services.memory_flow_service import memory_automation_service
 
+            get_daily_routine_service().record_interaction_sync(message.platform, message.account_id)
             asyncio.create_task(get_group_event_service().observe_message(message), name="group_event_observe")
             await memory_automation_service.on_incoming_message(message)
 

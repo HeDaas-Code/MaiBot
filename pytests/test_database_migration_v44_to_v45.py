@@ -21,7 +21,7 @@ def test_v44_to_v45_adds_canonical_event_link_without_changing_archives(tmp_path
     manager.migrate()
 
     with engine.connect() as connection:
-        assert connection.exec_driver_sql("PRAGMA user_version").scalar_one() == 45
+        assert connection.exec_driver_sql("PRAGMA user_version").scalar_one() == 46
         assert connection.exec_driver_sql("SELECT event_id, status, canonical_event_id FROM group_events").one() == (
             "event:existing",
             "collecting",
@@ -31,6 +31,12 @@ def test_v44_to_v45_adds_canonical_event_link_without_changing_archives(tmp_path
         assert (
             connection.exec_driver_sql(
                 "SELECT 1 FROM sqlite_master WHERE type='index' AND name='ix_group_events_canonical_event_id'"
+            ).scalar_one()
+            == 1
+        )
+        assert (
+            connection.exec_driver_sql(
+                "SELECT 1 FROM sqlite_master WHERE type='table' AND name='daily_routine_states'"
             ).scalar_one()
             == 1
         )

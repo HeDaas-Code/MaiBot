@@ -92,8 +92,25 @@
       "reasoningProcess": "推論プロセス",
       "maisakaMonitor": "MaiSaka チャット監視",
       "localChat": "ローカルチャット",
-      "settings": "WebUI 設定"
+      "settings": "WebUI 設定",
+      "dailyRoutine": "日課",
+      "dailyRoutineDesc": "アカウント単位の日課状態、予定表、内部下書きを表示"
     }
+  },
+  "dailyRoutine": {
+    "title": "日課",
+    "description": "アカウント単位の日課状態、活動タイムライン、送信しない下書き。",
+    "refresh": "更新",
+    "loading": "読み込み中…",
+    "disabled": "日課ランタイムは無効です",
+    "noAccounts": "読み込まれたボットアカウントはありません",
+    "defaultAccount": "既定アカウント",
+    "interactions": "{{count}} 件の交流",
+    "timeline": "今日の活動タイムライン",
+    "drafts": "内部下書き",
+    "untitled": "無題の下書き",
+    "noDrafts": "期限切れでない下書きはありません",
+    "loadFailed": "日課の読み込みに失敗しました"
   },
   "groupEvents": {
     "title": "グループイベント",

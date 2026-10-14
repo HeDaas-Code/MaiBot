@@ -31,6 +31,11 @@ export const MOBILE_EXTRA_MANAGE_SECTIONS: MenuSection[] = [
         label: 'sidebar.menu.groupEvents',
         path: '/group-events',
       },
+      {
+        icon: (props) => <BrainCircuit strokeWidth={1.7} {...props} />,
+        label: 'sidebar.menu.dailyRoutine',
+        path: '/daily-routine',
+      },
     ],
   },
   {

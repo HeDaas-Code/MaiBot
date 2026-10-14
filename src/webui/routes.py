@@ -17,6 +17,7 @@ from src.webui.routers.avatar import router as avatar_router
 from src.webui.routers.bot_accounts import router as bot_accounts_router
 from src.webui.routers.config import router as config_router
 from src.webui.routers.data_transfer import router as data_transfer_router
+from src.webui.routers.daily_routine import router as daily_routine_router
 from src.webui.routers.emoji import router as emoji_router
 from src.webui.routers.expression import router as expression_router
 from src.webui.routers.events import router as events_router
@@ -67,6 +68,7 @@ router.include_router(plugin_router)
 # 注册系统控制路由
 router.include_router(system_router)
 router.include_router(data_transfer_router)
+router.include_router(daily_routine_router)
 router.include_router(reasoning_process_router)
 router.include_router(reply_effects_router)
 router.include_router(search_router)

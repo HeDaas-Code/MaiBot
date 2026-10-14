@@ -460,9 +460,7 @@ class BotPlatformAccount(SQLModel, table=True):
     """适配器实际上报的 Bot 平台账号。"""
 
     __tablename__ = "bot_platform_accounts"  # type: ignore
-    __table_args__ = (
-        UniqueConstraint("platform", "account_id", name="uq_bot_platform_accounts_platform_account"),
-    )
+    __table_args__ = (UniqueConstraint("platform", "account_id", name="uq_bot_platform_accounts_platform_account"),)
 
     id: Optional[int] = Field(default=None, primary_key=True)
     platform: str = Field(index=True, max_length=100)
@@ -475,6 +473,75 @@ class BotPlatformAccount(SQLModel, table=True):
     last_adapter_id: Optional[str] = Field(default=None, max_length=255, nullable=True)
     last_plugin_id: Optional[str] = Field(default=None, max_length=255, nullable=True)
     last_gateway_name: Optional[str] = Field(default=None, max_length=255, nullable=True)
+
+
+class DailyRoutineState(SQLModel, table=True):
+    """机器人账号级日程状态快照。"""
+
+    __tablename__ = "daily_routine_states"  # type: ignore
+
+    account_key: str = Field(primary_key=True, max_length=512)
+    platform: str = Field(index=True, max_length=100)
+    account_id: Optional[str] = Field(default=None, index=True, max_length=255, nullable=True)
+    timezone: str = Field(default="Asia/Shanghai", max_length=64)
+    day_key: str = Field(index=True, max_length=32)
+    state_json: str = Field(default="{}", sa_column=Column(Text, nullable=False, server_default="{}"))
+    plan_json: str = Field(default="[]", sa_column=Column(Text, nullable=False, server_default="[]"))
+    last_updated_at: datetime = Field(default_factory=datetime.now, sa_column=Column(DateTime, nullable=False))
+    last_interaction_at: Optional[datetime] = Field(default=None, sa_column=Column(DateTime, nullable=True))
+    today_interaction_count: int = Field(default=0, sa_column=Column(Integer, nullable=False, server_default="0"))
+    today_positive_interactions: int = Field(default=0, sa_column=Column(Integer, nullable=False, server_default="0"))
+    last_sleep_quality: int = Field(default=70, sa_column=Column(Integer, nullable=False, server_default="70"))
+
+
+class DailyRoutineActivity(SQLModel, table=True):
+    """机器人账号级日程活动计划与执行状态。"""
+
+    __tablename__ = "daily_routine_activities"  # type: ignore
+    __table_args__ = (
+        UniqueConstraint("account_key", "day_key", "activity_id", name="uq_daily_routine_activity_day"),
+        Index("ix_daily_routine_activities_account_day", "account_key", "day_key"),
+        Index("ix_daily_routine_activities_status_end", "status", "scheduled_end"),
+    )
+
+    id: Optional[int] = Field(default=None, primary_key=True)
+    account_key: str = Field(index=True, max_length=512)
+    day_key: str = Field(index=True, max_length=32)
+    activity_id: str = Field(max_length=128)
+    name: str = Field(max_length=255)
+    activity_type: str = Field(max_length=32)
+    scheduled_start: datetime = Field(sa_column=Column(DateTime, nullable=False, index=True))
+    scheduled_end: datetime = Field(sa_column=Column(DateTime, nullable=False, index=True))
+    actual_started_at: Optional[datetime] = Field(default=None, sa_column=Column(DateTime, nullable=True))
+    actual_ended_at: Optional[datetime] = Field(default=None, sa_column=Column(DateTime, nullable=True))
+    status: str = Field(default="planned", index=True, max_length=32)
+    metadata_json: str = Field(default="{}", sa_column=Column(Text, nullable=False, server_default="{}"))
+
+
+class DailyRoutineDraft(SQLModel, table=True):
+    """不直接发送的日程短文章、知识候选和经历草稿。"""
+
+    __tablename__ = "daily_routine_drafts"  # type: ignore
+    __table_args__ = (
+        UniqueConstraint("account_key", "dedupe_key", name="uq_daily_routine_draft_dedupe"),
+        Index("ix_daily_routine_drafts_account_status", "account_key", "status"),
+        Index("ix_daily_routine_drafts_expires_at", "expires_at"),
+    )
+
+    draft_id: str = Field(primary_key=True, max_length=64)
+    account_key: str = Field(index=True, max_length=512)
+    activity_id: Optional[str] = Field(default=None, index=True, max_length=128, nullable=True)
+    draft_type: str = Field(default="draft", index=True, max_length=32)
+    title: str = Field(default="", max_length=500)
+    body: str = Field(sa_column=Column(Text, nullable=False))
+    source_refs_json: str = Field(default="[]", sa_column=Column(Text, nullable=False, server_default="[]"))
+    dedupe_key: str = Field(max_length=512)
+    status: str = Field(default="draft", index=True, max_length=32)
+    created_at: datetime = Field(default_factory=datetime.now, sa_column=Column(DateTime, nullable=False, index=True))
+    updated_at: datetime = Field(default_factory=datetime.now, sa_column=Column(DateTime, nullable=False))
+    expires_at: Optional[datetime] = Field(default=None, sa_column=Column(DateTime, nullable=True, index=True))
+    consumed_at: Optional[datetime] = Field(default=None, sa_column=Column(DateTime, nullable=True))
+
 
 class GroupEvent(SQLModel, table=True):
     """跨群讨论中的规范事件及其当前分析/立场状态。"""
@@ -498,8 +565,12 @@ class GroupEvent(SQLModel, table=True):
     stance_confidence: float = Field(default=0.0, sa_column=Column(Float, nullable=False, server_default="0"))
     created_at: datetime = Field(default_factory=datetime.now, sa_column=Column(DateTime, nullable=False))
     updated_at: datetime = Field(default_factory=datetime.now, sa_column=Column(DateTime, nullable=False, index=True))
-    last_activity_at: datetime = Field(default_factory=datetime.now, sa_column=Column(DateTime, nullable=False, index=True))
-    last_material_activity_at: datetime = Field(default_factory=datetime.now, sa_column=Column(DateTime, nullable=False, index=True))
+    last_activity_at: datetime = Field(
+        default_factory=datetime.now, sa_column=Column(DateTime, nullable=False, index=True)
+    )
+    last_material_activity_at: datetime = Field(
+        default_factory=datetime.now, sa_column=Column(DateTime, nullable=False, index=True)
+    )
     ready_at: Optional[datetime] = Field(default=None, sa_column=Column(DateTime, nullable=True))
     closed_at: Optional[datetime] = Field(default=None, sa_column=Column(DateTime, nullable=True))
 
@@ -519,7 +590,9 @@ class GroupEventGroup(SQLModel, table=True):
     group_id: str = Field(index=True, max_length=255)
     group_name: str = Field(default="", max_length=255)
     first_activity_at: datetime = Field(default_factory=datetime.now, sa_column=Column(DateTime, nullable=False))
-    last_activity_at: datetime = Field(default_factory=datetime.now, sa_column=Column(DateTime, nullable=False, index=True))
+    last_activity_at: datetime = Field(
+        default_factory=datetime.now, sa_column=Column(DateTime, nullable=False, index=True)
+    )
 
 
 class GroupEventSource(SQLModel, table=True):

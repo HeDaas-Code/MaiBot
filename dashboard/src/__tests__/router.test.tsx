@@ -86,6 +86,7 @@ const expectedPaths = [
   '/statistics',
   '/reply-effects',
   '/group-events',
+  '/daily-routine',
   '/config/bot',
   '/config/model',
   '/config/prompts',

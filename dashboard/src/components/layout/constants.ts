@@ -122,6 +122,7 @@ export const menuSections: MenuSection[] = [
         featureFlag: 'replyEffects',
       },
       { icon: ReplyEffectsIcon, label: 'sidebar.menu.groupEvents', path: '/group-events' },
+      { icon: ReplyEffectsIcon, label: 'sidebar.menu.dailyRoutine', path: '/daily-routine' },
       {
         icon: DataTransferIcon,
         label: 'sidebar.menu.dataTransfer',

@@ -328,11 +328,26 @@ class MaisakaReasoningEngine:
                 logger.debug(f"{self._runtime.log_prefix} 群聊事件参考构建失败，已跳过: {exc}")
                 return ""
 
-        heuristic_memory_message, profile_messages, image_memory_message, event_message = await asyncio.gather(
+        async def build_routine_message() -> str:
+            try:
+                from src.services.daily_routine_service import get_daily_routine_service
+
+                latest_text = source_messages[-1].processed_plain_text if source_messages else ""
+                return await get_daily_routine_service().build_planner_context(
+                    self._runtime.chat_stream.platform,
+                    self._runtime.chat_stream.account_id,
+                    str(latest_text or ""),
+                )
+            except Exception as exc:
+                logger.debug(f"{self._runtime.log_prefix} 日程状态参考构建失败，已跳过: {exc}")
+                return ""
+
+        heuristic_memory_message, profile_messages, image_memory_message, event_message, routine_message = await asyncio.gather(
             build_heuristic_memory_message(),
             build_profile_messages(),
             build_image_memory_message(),
             build_event_message(),
+            build_routine_message(),
         )
         if heuristic_memory_message:
             injected_messages.append(heuristic_memory_message)
@@ -341,6 +356,8 @@ class MaisakaReasoningEngine:
             injected_messages.append(image_memory_message)
         if event_message:
             injected_messages.append(event_message)
+        if routine_message:
+            injected_messages.append(routine_message)
         return injected_messages
 
     def _refresh_jargon_reference_message(self) -> Optional[ReferenceMessage]:

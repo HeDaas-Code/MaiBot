@@ -92,7 +92,9 @@
       "reasoningProcess": "Reasoning Process",
       "maisakaMonitor": "MaiSaka Chat Monitor",
       "localChat": "Local Chat",
-      "settings": "WebUI Settings"
+      "settings": "WebUI Settings",
+      "dailyRoutine": "Daily Routine",
+      "dailyRoutineDesc": "View account-level routine state, timeline, and internal drafts"
     }
   },
   "groupEvents": {
@@ -1654,5 +1656,20 @@
     "mobileTextEmpty": "Empty",
     "mobileTextCancel": "Cancel",
     "mobileTextDone": "Done"
+  },
+  "dailyRoutine": {
+    "title": "Daily Routine",
+    "description": "Account-level routine state, activity timeline, and unsent daily drafts.",
+    "refresh": "Refresh",
+    "loading": "Loading…",
+    "disabled": "Daily routine runtime is disabled",
+    "noAccounts": "No loaded bot accounts",
+    "defaultAccount": "default account",
+    "interactions": "{{count}} interactions",
+    "timeline": "Today's activity timeline",
+    "drafts": "Internal drafts",
+    "untitled": "Untitled draft",
+    "noDrafts": "No unexpired drafts",
+    "loadFailed": "Failed to load daily routine"
   }
 }
