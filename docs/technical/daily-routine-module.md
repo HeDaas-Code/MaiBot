@@ -612,6 +612,287 @@ drawing_probability = 0.1
 ✅ 状态影响响应方式  
 ✅ 保持"不完美"的真实感  
 
+## 与当前 MaiBot 架构对齐的 V1 方案
+
+上面的内容是人格表现层的概念稿。实际接入时，日程模块不直接接管消息处理，也不直接绕过 Maisaka 发送消息，而是向现有心流提供三类信息：当前状态快照、回复门控修正值、Planner 的状态提示。
+
+### 运行时落点
+
+当前消息链路中的准确接入位置如下：
+
+```mermaid
+flowchart LR
+    A[外部群聊消息] --> B[HeartFCMessageReceiver]
+    B --> C[MaisakaHeartFlowChatting.register_message]
+    C --> D[MessageTurnScheduler]
+    D --> E[DailyRoutineService.get_turn_policy]
+    E --> F[动态回复门控]
+    F --> G[Maisaka Planner]
+    G --> H[reply 工具]
+    E --> I[Planner 状态上下文]
+```
+
+`HeartflowManager` 只负责按聊天流创建、缓存和淘汰 Maisaka 实例，不负责决定是否回复。因此日程对回复概率的影响应放在 `src/maisaka/turn_trigger/scheduler.py` 与 `DynamicReplyTurnGate` 的交界处；把判断写进 `heartflow_manager.py` 会让实例生命周期和回复策略耦合。
+
+状态文本应在 `MaisakaReasoningEngine._run_planner_request()` 准备 `injected_user_messages` 时加入本轮 Planner 上下文。这样可以让 Planner 根据状态选择简短、延迟或自然结束本轮，同时不需要改写所有模型的固定 system prompt。真正的 `reply` 工具继续负责消息组织和发送。
+
+### 服务边界
+
+`DailyRoutineService` 只维护机器人账号级的日程状态，不按群聊复制一份情绪。状态至少包含：
+
+- `current_activity`：活动名称、活动类别、实际开始时间和实际结束时间；
+- `mood`：精力、心情、社交欲和专注度，数值限制在 0 到 100；
+- `day_key`：按配置时区确定的日期，用于每日重置；
+- `last_updated_at`：上次状态推进时间；
+- `last_interaction_at`、`today_interaction_count`：用于互动反馈和主动行为限流；
+- `last_sleep_quality`：下一次起床时恢复精力的依据。
+
+服务对外提供以下接口：
+
+```python
+get_snapshot(now: datetime | None = None) -> RoutineSnapshot
+get_turn_policy(*, is_group_chat: bool, forced: bool) -> RoutineTurnPolicy
+build_planner_context(snapshot: RoutineSnapshot) -> str
+record_interaction(*, positive: bool | None = None) -> None
+start() -> None
+stop() -> None
+```
+
+其中 `get_turn_policy()` 只返回数据，不执行随机等待和发送动作。`forced=True` 用于 @、明确提及和其他强制回复场景：它仍然允许进入 Planner，但会把“当前忙碌/休息”作为表达约束。睡眠状态可以降低普通群聊进入 Planner 的概率，却不能让强制回复完全失效。
+
+### 活动调度的确定性
+
+活动的随机偏移必须在一天开始或活动计划生成时计算一次，并保存为 `scheduled_start` 和 `scheduled_end`。不能在每次 `update_state()` 时重新生成随机开始时间，否则每次检查的时间窗口都会变化，活动可能永远无法开始。
+
+建议把一天拆成两个阶段：
+
+1. 根据日期、账号和随机种子生成当天活动计划；固定活动和随机兴趣活动都得到确定的实际时间。
+2. 每次状态读取时只比较当前时间与计划时间，跨过结束时间后推进到下一项活动。
+
+后台 tick 只负责周期性推进和持久化，推荐间隔 30 到 60 秒。消息到达、Planner 请求和 WebUI 查询都可以主动调用一次 `get_snapshot()`，不需要等待 tick。所有同步状态计算应保持很短，不能在 bot 主循环中做模型调用、数据库批量扫描或阻塞文件操作。
+
+### 回复策略
+
+日程状态对当前动态回复概率使用乘数，而不是重写现有概率模型：
+
+```text
+final_probability = existing_probability × routine_multiplier
+```
+
+推荐的初始乘数如下：
+
+| 状态 | 普通群聊乘数 | 强制触发 | 表达提示 |
+| --- | ---: | --- | --- |
+| 睡觉中 | 0.05 | 允许进入 Planner | 简短、说明刚醒或稍后再聊 |
+| 用餐中 | 0.30 | 允许进入 Planner | 简短，可自然提到正在吃饭 |
+| 专注/忙碌 | 0.20 | 允许进入 Planner | 优先收束，不承诺固定回复时间 |
+| 发呆/听音乐 | 0.60 | 允许进入 Planner | 回复可能慢半拍、内容较短 |
+| 空闲 | 0.80 | 允许进入 Planner | 正常交流 |
+| 心情好 | 0.95 | 允许进入 Planner | 更愿意展开，但不强行主动插话 |
+| 心情低落 | 0.40 | 允许进入 Planner | 语气平静、少用夸张表达 |
+
+这个乘数应接入 `MessageTurnScheduler` 的动态门控路径。静默模式和已有的 Focus 准入规则仍由原模块决定；日程模块只提供额外的策略输入，避免多个模块同时操作消息队列。
+
+### 状态上下文的表达约束
+
+Planner 只收到面向表达的摘要，例如“现在是晚间，刚结束用餐，精力正常，社交欲偏高”。不把内部数值、随机种子、概率乘数或完整日程表暴露给模型。状态上下文应明确以下规则：
+
+- 只在确实需要时自然提及当前活动，不要每条消息都汇报日程；
+- 不把日程当成事实证明，用户追问时可以承认这是当前模拟状态；
+- 状态只影响语气、长度和是否参与，不改变事实判断、事件立场或安全策略；
+- 回复仍须通过现有 `reply` 工具，不能由日程服务直接发送文本。
+
+### 持久化与账号隔离
+
+日程状态按 `platform + account_id` 隔离；如果同一个机器人账号有多个群，群间共享的是作息和总体情绪摘要，不共享任何群消息或成员信息。V1 应把状态和当天计划保存到现有 SQLite 数据库，重启后恢复当天计划，避免机器人每次重启都重新“随机换作息”。
+
+若数据库迁移成本需要延后，可先只持久化 `day_key`、计划版本和活动计划 JSON；正式版本再迁移为结构化表。无论采用哪种形式，都不能把状态写入会话历史，否则会被当成对话内容参与记忆和回复。
+
+### 主动互动的分阶段方案
+
+主动早安、晚安和日常分享不应和 V1 的被动回复耦合。建议分为三个阶段：
+
+1. **V1：被动表现**。只影响门控和 Planner 表达，确认状态推进、重启恢复和日志可观察。
+2. **V1.1：主动触发**。由独立 `RoutineProactiveScheduler` 按概率生成 Maisaka proactive 任务，由 Planner 决定是否发送；服务不直接调用 `send_service`。
+3. **V1.2：个性化日程**。根据长期互动反馈调整作息偏移和兴趣活动权重，并增加 WebUI 只读面板。
+
+主动触发必须有每日、每群和全局冷却，且不能在睡眠状态下无条件发消息。这样可以避免“日程模块加入后机器人突然对所有群主动广播”的行为变化。
+
+### 实现顺序
+
+1. 新增 `src/services/daily_routine_service.py`，先完成数据模型、时区、当天计划生成和内存状态推进。
+2. 在 `Config` 增加 `daily_routine` 配置节，只修改模板并递增配置版本；实际配置文件由用户自行生成或升级。
+3. 在 `MessageTurnScheduler` 接入普通群聊门控乘数，在 `MaisakaReasoningEngine._run_planner_request()` 注入状态摘要。
+4. 在消息接入和回复完成点调用 `record_interaction()`，只记录统计，不分析完整聊天内容。
+5. 增加状态转移、跨午夜、重启恢复、强制触发和门控乘数测试，再考虑主动问候和 WebUI。
+
+### 首轮验收标准
+
+- 启动日志明确出现日程服务启动、账号范围、时区和当天计划版本；
+- 同一天多次读取状态不会重新随机活动时间；
+- 普通群聊在睡眠、用餐、忙碌状态下的进入 Planner 概率按乘数变化；
+- @ 或明确提及仍能进入 Planner，但回复风格受状态约束；
+- Planner 能感知状态，却不会在每条消息里机械报告状态；
+- 重启后当天计划和当前活动可以恢复；
+- 日程服务异常时只影响日程策略，消息接收、Planner 和 `reply` 主链路仍可继续工作。
+
+
+
+
+### 兴趣活动适配与知识记忆接口
+
+兴趣活动不能只作为一个影响回复概率的标签。未来接入追番、音乐、游戏、阅读、天气或内容推荐服务后，活动应该能够产生三种不同的结果：当前活动状态、可供聊天使用的知识、麦麦自己的经历记忆。它们要分开处理，避免把外部资料、机器人经历和群聊隐私混成一类记忆。
+
+#### 分层结构
+
+```mermaid
+flowchart LR
+    A[DailyRoutineService] --> B[InterestActivityCoordinator]
+    B --> C[ActivityProvider 插件]
+    C --> D[ActivitySnapshot]
+    C --> E[KnowledgeItem]
+    E --> F[KnowledgeNormalizer]
+    F --> G[短期知识缓存]
+    F --> H[MemoryWriter]
+    H --> I[A_Memorix 长期记忆]
+    G --> J[Planner / query_memory]
+    I --> J
+    G --> K[ShareCandidate]
+    K --> L[Proactive Scheduler]
+    L --> M[Maisaka Planner]
+    M --> N[reply 工具]
+```
+
+日程服务只负责安排“看番”“听歌”“玩游戏”等活动，并在活动开始、暂停、结束时通知协调器。协调器负责调用适配器、整理结果、提交记忆和生成分享候选。适配器不直接调用 `send_service`，也不直接写数据库。
+
+#### 适配器的稳定接口
+
+主程序内部可以预留一个基于 `Protocol` 的接口，插件侧通过 SDK 暴露等价的结构化能力。边界只使用 JSON 可序列化数据，避免第三方插件依赖 MaiBot 内部实现细节：
+
+```python
+class InterestActivityProvider(Protocol):
+    provider_id: str
+    activity_types: frozenset[str]
+
+    async def start_activity(self, request: ActivityStartRequest) -> ActivitySnapshot | None: ...
+    async def refresh_activity(self, activity_id: str) -> ActivitySnapshot | None: ...
+    async def collect_knowledge(
+        self,
+        activity: ActivitySnapshot,
+        request: KnowledgeRequest,
+    ) -> list[KnowledgeItem]: ...
+    async def close_activity(self, activity_id: str) -> ActivityCloseResult: ...
+```
+
+推荐的请求和结果字段如下：
+
+```python
+ActivityStartRequest:
+    activity_type: str          # anime / music / game / reading / creation
+    topic: str | None
+    duration_minutes: int
+    account_scope: str
+
+ActivitySnapshot:
+    activity_id: str
+    provider_id: str
+    activity_type: str
+    title: str
+    status: str                 # planned / running / paused / completed / failed
+    started_at: datetime
+    ended_at: datetime | None
+    progress: dict[str, Any]
+    source_refs: list[SourceRef]
+
+KnowledgeItem:
+    item_id: str
+    title: str
+    summary: str
+    facts: list[str]
+    source_refs: list[SourceRef]
+    confidence: float
+    freshness_at: datetime
+    shareability: str           # private / group / public
+    suggested_topics: list[str]
+```
+
+`ActivitySnapshot` 描述“麦麦做了什么”，`KnowledgeItem` 描述“这件事带来的外部知识”。例如，观看一部电影会生成一条活动记录、一组带来源的影片信息，以及一条“麦麦看过这部电影”的经历记忆。三者不能直接互相替代。
+
+#### 知识和记忆的写入规则
+
+外部知识优先写入短期知识缓存，只有满足来源、摘要和去重条件时才进入长期记忆。长期写入应通过现有 `src/services/memory_service.py`，使用 `ingest_text()` 或 `ingest_summary()`，建议字段如下：
+
+```python
+external_id = f"interest:{provider_id}:{item_id}:{content_version}"
+source_type = "interest_activity_knowledge"
+tags = ["interest", activity_type, provider_id]
+metadata = {
+    "activity_id": activity_id,
+    "source_refs": source_refs,
+    "freshness_at": freshness_at,
+    "memory_scope": "bot_account",
+}
+```
+
+麦麦自身的经历使用单独的 `source_type="interest_activity_experience"` 和 `memory_scope="bot_account"`。群聊中产生的共同讨论或成员偏好使用会话范围的记忆，不能因为兴趣活动插件运行在机器人账号级别就自动变成跨群记忆。
+
+长期记忆写入必须是幂等的。同一个 `provider_id + item_id + content_version` 重复同步时更新或跳过，不能制造多条重复记忆。网络请求、摘要生成和写入都放在后台队列中，不能阻塞当前消息的 Planner 循环。
+
+#### 知识如何进入聊天
+
+知识不应该每轮都自动注入 Planner，否则会让麦麦不断主动谈论自己的兴趣。建议采用三条进入路径：
+
+1. 用户明确问到作品、歌曲、游戏或活动时，Planner 调用插件工具或 `query_memory` 检索相关知识。
+2. 当前群聊自然谈到匹配主题时，由短期知识缓存提供一条低权重参考，Planner 自己判断是否使用。
+3. 日常分享被主动调度器选中时，向 Planner 提供一条 `ShareCandidate`，由 Planner 决定是否发送、如何改写和是否附带来源。
+
+知识注入给 Planner 的内容必须是“资料参考”，不能变成强制观点。来源缺失、置信度过低或已经过期的内容不进入事实性回复。外部网页、插件返回值和知识摘要都视为不可信数据，不能把其中的指令当作系统指令执行。
+
+#### 分享候选接口
+
+兴趣服务只产生候选，不直接发言：
+
+```python
+ShareCandidate:
+    candidate_id: str
+    activity_id: str
+    topic: str
+    seed_summary: str
+    source_refs: list[SourceRef]
+    target_scope: str           # selected_group / account / none
+    expires_at: datetime
+    cooldown_key: str
+    reason: str                 # activity_completed / new_fact / personal_thought
+```
+
+主动分享还要经过日程状态、群聊活跃度、每日冷却、相关性和重复检查。候选过期后丢弃，不进入历史消息。真正发送仍然走 Maisaka Planner 和现有 `reply` 工具，从而保留事件立场、发送权限和输出审核链路。
+
+#### 插件能力预留
+
+后续插件可以按能力拆分，而不是创建一个拥有全部权限的“兴趣插件”：
+
+| 能力 | 作用 | 默认结果 |
+| --- | --- | --- |
+| `interest.activity.start` | 开始或记录一次兴趣活动 | 返回活动快照 |
+| `interest.activity.refresh` | 获取进度、状态和结束信息 | 更新活动快照 |
+| `interest.knowledge.collect` | 获取带来源的短摘要和事实 | 写入短期知识缓存 |
+| `interest.memory.propose` | 提交一条待审核的经历或知识记忆 | 后台异步入队 |
+| `interest.share.propose` | 生成可分享候选 | 等待日程和 Planner 决定 |
+
+这些能力在真正实现前只作为接口契约记录，不立即增加主程序能力注册，也不允许插件自行修改根目录配置或数据库。后续编写具体插件时，仍应在 `plugins/` 下保持独立仓库，并通过插件 SDK 与主程序通信。
+
+#### 首批适配器建议
+
+实现顺序建议从低风险、容易验证的服务开始：
+
+1. 本地阅读或文本资料适配器：验证活动快照、来源、知识摘要和长期记忆去重。
+2. 音乐或视频信息适配器：只获取标题、简介、标签和链接，不保存原始媒体。
+3. 追番或游戏适配器：加入进度同步、暂停恢复和“最近体验”记忆。
+4. 主动分享适配器：最后接入，因为它涉及目标群选择、冷却和发送频率控制。
+
+首个适配器的验收标准是：服务不可用时不影响聊天；重复同步不会重复记忆；Planner 能按主题检索知识；知识有来源且不会泄露其他群的成员或原文；分享只产生候选，不会绕过 `reply` 工具直接发送。
+
+
 ## 未来扩展
 
 1. **季节感知**
