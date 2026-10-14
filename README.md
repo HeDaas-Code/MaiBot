@@ -28,6 +28,8 @@
 > **🔱 本项目为 [MaiM-with-u/MaiBot](https://github.com/MaiM-with-u/MaiBot) 的二次开发分支**
 >
 > 基于原项目进行研究和功能扩展，不会向上游提交 PR。所有改进和新功能都在本仓库维护。
+>
+> ⚠️ **贡献时请注意**：PR 应提交到 `HeDaas-Code/MaiBot`，不要提交到上游 `MaiM-with-u/MaiBot`！
 
 麦麦 MaiSaka 是一个基于大语言模型的可交互智能体。  
 
@@ -67,6 +69,10 @@ MaiSaka 不仅仅是一个机器人，不仅仅是一个可以帮你完成任务
 - **🎯 本地 Embedding 支持**  
   内嵌本地 GPU 推理的 Embedding 模型，降低 API 成本，提升隐私性。  
   <sub><sup>**Local Embedding**: Built-in local GPU inference for embedding models, reducing API costs and improving privacy.</sup></sub>
+
+- **🌅 日常日程模块** *(设计中)*  
+  模拟真实人类的作息规律，有自己的起床、用餐、午休、睡眠时间。情绪状态会随时间和互动变化，影响回复风格和活跃度。深夜响应率降低，心情好时更活跃，忙碌时简短回复。让麦麦不再是 7×24 小时待命的程序，而是有自己生活节奏的"人"。  
+  <sub><sup>**Daily Routine Module** *(in design)*: Simulates real human daily rhythms with wake-up, meal, nap, and sleep times. Mood states change with time and interactions, affecting reply style and activity. Lower response rate at night, more active when in good mood, brief replies when busy. Makes MaiSaka not a 24/7 program, but a "person" with her own life rhythm.</sup></sub>
 
 <picture><source media="(prefers-color-scheme: dark)" srcset="depends-data/readme/sec-quick-start-night.svg"><img src="depends-data/readme/sec-quick-start-day.svg" alt="快速开始 · QUICK START" width="100%"></picture>
 
@@ -113,13 +119,15 @@ WebUI 默认在 `http://localhost:7999` 访问。
 
 - **[项目架构分析](docs/technical/project-analysis.md)**: 深入理解 MaiBot 的核心架构和工作流程
 - **[群聊事件跟踪器](docs/technical/group-event-tracker.md)**: 新功能的详细设计文档
+- **[本地 Embedding 插件](docs/technical/local-embedding-plugin.md)**: 本地推理实现方案
+- **[日常日程模块](docs/technical/daily-routine-module.md)**: 人格化日程系统设计 ⭐
 
 ### 原版文档
 
 - **[部署教程](https://docs.mai-mai.org/manual/)**: 完整的部署指南
 - **[官方文档](https://docs.mai-mai.org)**: 原版功能文档
 - **[插件开发](https://github.com/Mai-with-u/maibot-plugin-sdk/blob/main/docs/guide.md)**: 插件开发指南
-- **[贡献指南](docs/CONTRIBUTE.md)**: 如何参与贡献
+- **[贡献指南](CONTRIBUTING.md)**: 如何参与贡献 ⚠️
 
 <picture><source media="(prefers-color-scheme: dark)" srcset="depends-data/readme/sec-related-night.svg"><img src="depends-data/readme/sec-related-day.svg" alt="相关项目 · Related Projects" width="100%"></picture>
 
@@ -152,6 +160,7 @@ WebUI 默认在 `http://localhost:7999` 访问。
 - **提升自主性**: 让麦麦能够自主识别和参与重要讨论，而不仅仅是被动响应
 - **保持克制**: 分析期间保持中立，避免草率表态，体现理性和思考
 - **注重隐私**: 支持本地模型推理，减少对外部 API 的依赖
+- **生活节奏**: 模拟真实人类的作息和情绪，让麦麦有自己的"生活" ⭐
 
 <picture><source media="(prefers-color-scheme: dark)" srcset="depends-data/readme/sec-contributors-night.svg"><img src="depends-data/readme/sec-contributors-day.svg" alt="致谢 · Acknowledgments" width="100%"></picture>
 
@@ -179,6 +188,10 @@ WebUI 默认在 `http://localhost:7999` 访问。
 > [!NOTE]
 > 本项目为二次开发分支，与上游项目独立维护。所有新功能和改进仅在本仓库发布。  
 > <sub><sup>This is a fork with independent development. All new features and improvements are released only in this repository.</sup></sub>
+
+> [!WARNING]
+> **贡献者注意**：请确保 Pull Request 提交到 `HeDaas-Code/MaiBot`，不要提交到上游 `MaiM-with-u/MaiBot`！  
+> <sub><sup><strong>Contributors:</strong> Please ensure your Pull Requests target <code>HeDaas-Code/MaiBot</code>, not the upstream <code>MaiM-with-u/MaiBot</code>!</sup></sub>
 
 **License**: GPL-3.0
 
