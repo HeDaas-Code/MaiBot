@@ -26,6 +26,11 @@ export const MOBILE_EXTRA_MANAGE_SECTIONS: MenuSection[] = [
         label: 'sidebar.menu.statistics',
         path: '/statistics',
       },
+      {
+        icon: (props) => <BrainCircuit strokeWidth={1.7} {...props} />,
+        label: 'sidebar.menu.groupEvents',
+        path: '/group-events',
+      },
     ],
   },
   {

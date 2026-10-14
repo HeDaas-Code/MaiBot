@@ -868,6 +868,42 @@ async def _send_via_platform_io(
     raw_reply_message_id = before_kwargs.get("reply_message_id", reply_message_id)
     reply_message_id = None if raw_reply_message_id in {None, ""} else str(raw_reply_message_id)
 
+    if message.processed_plain_text:
+        from src.services.group_event_service import get_group_event_service
+
+        event_service = get_group_event_service()
+        if not await event_service.can_send_outbound(
+            message.session_id,
+            message.processed_plain_text,
+            str(reply_message_id or ""),
+        ):
+            logger.info("事件立场尚未由 Planner 确认，已阻止旁路消息发送")
+            return None
+        guarded_text = await event_service.guard_outbound_text(
+            message.session_id,
+            message.processed_plain_text,
+            str(reply_message_id or ""),
+        )
+        if guarded_text != message.processed_plain_text:
+            from src.common.data_models.message_component_data_model import TextComponent
+
+            components = message.raw_message.components
+            first_text_index = next(
+                (index for index, component in enumerate(components) if isinstance(component, TextComponent)),
+                None,
+            )
+            rewritten_component = TextComponent(guarded_text)
+            if first_text_index is None:
+                components.insert(0, rewritten_component)
+            else:
+                components[first_text_index] = rewritten_component
+                message.raw_message.components = [
+                    component
+                    for index, component in enumerate(components)
+                    if index == first_text_index or not isinstance(component, TextComponent)
+                ]
+        message.processed_plain_text = guarded_text
+
     platform_io_manager = get_platform_io_manager()
     try:
         await platform_io_manager.ensure_send_pipeline_ready()

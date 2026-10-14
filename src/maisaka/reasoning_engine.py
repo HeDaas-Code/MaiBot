@@ -312,16 +312,35 @@ class MaisakaReasoningEngine:
                 logger.debug(f"{self._runtime.log_prefix} 图片记忆自然拉起失败，已跳过: {exc}")
                 return ""
 
-        heuristic_memory_message, profile_messages, image_memory_message = await asyncio.gather(
+        async def build_event_message() -> str:
+            try:
+                from src.services.group_event_service import get_group_event_service
+
+                latest_text = source_messages[-1].processed_plain_text if source_messages else ""
+                trigger_message_id = str(source_messages[-1].message_id or "") if source_messages else ""
+                contexts = await get_group_event_service().get_contexts_for_message(
+                    self._runtime.session_id,
+                    trigger_message_id,
+                    str(latest_text or ""),
+                )
+                return "\n\n".join(context.text for context in contexts)
+            except Exception as exc:
+                logger.debug(f"{self._runtime.log_prefix} 群聊事件参考构建失败，已跳过: {exc}")
+                return ""
+
+        heuristic_memory_message, profile_messages, image_memory_message, event_message = await asyncio.gather(
             build_heuristic_memory_message(),
             build_profile_messages(),
             build_image_memory_message(),
+            build_event_message(),
         )
         if heuristic_memory_message:
             injected_messages.append(heuristic_memory_message)
         injected_messages.extend(profile_messages)
         if image_memory_message:
             injected_messages.append(image_memory_message)
+        if event_message:
+            injected_messages.append(event_message)
         return injected_messages
 
     def _refresh_jargon_reference_message(self) -> Optional[ReferenceMessage]:
@@ -839,6 +858,11 @@ class MaisakaReasoningEngine:
         cached_messages = self._runtime._collect_pending_messages() if self._runtime._has_pending_messages() else []
         continuation_logical_turn_id: str | None = None
         if cached_messages:
+            if proactive_triggered:
+                # 同时有真实消息和主动触发时以真实消息为锚点，但必须消费合成触发状态，
+                # 避免下一次普通消息错误继承本轮的 proactive 标记。
+                self._runtime._consume_proactive_trigger_message()
+                self._runtime._consume_proactive_logical_turn_id()
             self._runtime._enter_running_state()
             self._runtime._update_stage_status(
                 "消息整理",

@@ -80,6 +80,7 @@ EMPTY_TASK_FALLBACKS = {
     "fast_model": "utils",
     "learner": "utils",
     "mid_memory": "fast_model",
+    "event_analysis": "utils",
 }
 EMBEDDING_TASK_NAMES = {"embedding", "image_embedding"}
 """嵌入类任务：向量空间必须保持一致，因此忽略配置里的选择策略，始终按配置顺序取第一个可用模型"""

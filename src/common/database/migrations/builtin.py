@@ -48,6 +48,8 @@ from .v39_to_v40 import migrate_v39_to_v40
 from .v40_to_v41 import migrate_v40_to_v41
 from .v41_to_v42 import BEHAVIOR_TABLES, migrate_v41_to_v42
 from .v42_to_v43 import migrate_v42_to_v43
+from .v43_to_v44 import migrate_v43_to_v44
+from .v44_to_v45 import migrate_v44_to_v45
 from .version_store import SQLiteUserVersionStore
 
 EMPTY_SCHEMA_VERSION = 0
@@ -94,7 +96,9 @@ V40_SCHEMA_VERSION = 40
 V41_SCHEMA_VERSION = 41
 V42_SCHEMA_VERSION = 42
 V43_SCHEMA_VERSION = 43
-LATEST_SCHEMA_VERSION = 43
+V44_SCHEMA_VERSION = 44
+V45_SCHEMA_VERSION = 45
+LATEST_SCHEMA_VERSION = 45
 
 _LEGACY_V1_EXCLUSIVE_TABLES = (
     "chat_streams",
@@ -1961,6 +1965,20 @@ def build_default_migration_registry() -> MigrationRegistry:
                 description="压缩移除行为学习表后的数据库，回收磁盘空间。",
                 handler=migrate_v42_to_v43,
                 transactional=False,
+            ),
+            MigrationStep(
+                version_from=V43_SCHEMA_VERSION,
+                version_to=V44_SCHEMA_VERSION,
+                name="v43_to_v44",
+                description="新增群聊事件跟踪档案表。",
+                handler=migrate_v43_to_v44,
+            ),
+            MigrationStep(
+                version_from=V44_SCHEMA_VERSION,
+                version_to=V45_SCHEMA_VERSION,
+                name="v44_to_v45",
+                description="为群聊事件档案增加规范事件归属，用于归一和去重。",
+                handler=migrate_v44_to_v45,
             ),
         ]
     )

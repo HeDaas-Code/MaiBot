@@ -84,6 +84,12 @@ const statisticsRoute = createRoute({
   component: lazyRouteComponent(() => import('./routes/logs'), 'StatisticsLogViewerPage'),
 })
 
+const groupEventsRoute = createRoute({
+  getParentRoute: () => protectedRoute,
+  path: '/group-events',
+  component: lazyRouteComponent(() => import('./routes/group-events'), 'GroupEventsPage'),
+})
+
 const replyEffectsRoute = createRoute({
   getParentRoute: () => protectedRoute,
   path: '/reply-effects',
@@ -381,6 +387,7 @@ const routeTree = rootRoute.addChildren([
     indexRoute,
     statisticsRoute,
     replyEffectsRoute,
+    groupEventsRoute,
     botConfigRoute,
     modelConfigRoute,
     promptManagementRoute,

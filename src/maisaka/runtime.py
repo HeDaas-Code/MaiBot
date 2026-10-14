@@ -774,6 +774,20 @@ class MaisakaHeartFlowChatting(MaisakaFocusRuntimeMixin, MaisakaRuntimeDisplayMi
         self._queue_proactive_turn(self._build_proactive_trigger_message(task.task_id, "子代理任务结束"))
         logger.info(f"{self.log_prefix} 后台子代理任务结束并已送回结论: task_id={task.task_id} status={task.status}")
 
+    async def schedule_event_stance_confirmation(self, message_id: str, event_id: str) -> None:
+        """在收到相关消息后，绕过频率门槛唤醒 Planner 确认已分析事件的立场。"""
+
+        if not self._running:
+            return
+        trigger_message = next(
+            (message for message in reversed(self.message_cache) if message.message_id == message_id),
+            None,
+        )
+        if trigger_message is None:
+            return
+        self._arm_forced_turn_state(message_id=message_id, reason=f"事件立场确认:{event_id}")
+        self._queue_proactive_turn(trigger_message, logical_turn_id=uuid.uuid4().hex)
+
     def _build_proactive_trigger_message(self, task_id: str, description: str = "插件主动聊天任务") -> SessionMessage:
         """构造主动任务触发消息，不写入消息数据库。"""
 

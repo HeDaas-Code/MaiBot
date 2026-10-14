@@ -267,12 +267,20 @@ async def graceful_shutdown(main_system: MainSystem | None = None) -> bool:
             and success
         )
 
-        # 与 src/main.py 一致：先等待图片描述写回，再停止记忆写入者及内核。
+        # 与 src/main.py 一致：先等待图片描述写回，再停止事件/记忆后台服务。
         from src.chat.image_system.image_manager import image_manager
+        from src.services.group_event_service import get_group_event_service
 
         success = (
             await _await_shutdown_step(
                 image_manager.shutdown(), timeout=IMAGE_SYNC_TIMEOUT, step_name="等待图片描述同步"
+            )
+            and success
+        )
+
+        success = (
+            await _await_shutdown_step(
+                get_group_event_service().stop(), timeout=5.0, step_name="停止群聊事件跟踪器"
             )
             and success
         )

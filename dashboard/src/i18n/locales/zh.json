@@ -85,6 +85,8 @@
       "mcpSettings": "MCP 设置",
       "dataTransfer": "数据管理",
       "statistics": "详细统计数据",
+      "groupEvents": "群聊事件",
+      "groupEventsDesc": "查看群聊事件档案和临时立场",
       "replyEffects": "回复效果",
       "logViewer": "日志查看器",
       "reasoningProcess": "推理过程",
@@ -92,6 +94,25 @@
       "localChat": "本地聊天室",
       "settings": "WEBUI设置"
     }
+  },
+  "groupEvents": {
+    "title": "群聊事件",
+    "description": "从群聊讨论中整理的事件档案与临时立场。",
+    "refresh": "刷新",
+    "loading": "加载中…",
+    "empty": "暂无事件档案",
+    "loadFailed": "加载事件失败",
+    "noStance": "暂无立场",
+    "sourceCount": "来源消息 {{count}} 条",
+    "groups": "涉及群聊 {{count}} 个",
+    "rootCause": "事件根因",
+    "pending": "待分析",
+    "stance": "临时立场",
+    "viewpoints": "观点流派",
+    "timeline": "时间线",
+    "sources": "来源证据",
+    "groupId": "群号",
+    "sourceId": "消息ID"
   },
   "statisticsPage": {
     "title": "详细统计数据",

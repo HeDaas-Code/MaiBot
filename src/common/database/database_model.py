@@ -475,3 +475,70 @@ class BotPlatformAccount(SQLModel, table=True):
     last_adapter_id: Optional[str] = Field(default=None, max_length=255, nullable=True)
     last_plugin_id: Optional[str] = Field(default=None, max_length=255, nullable=True)
     last_gateway_name: Optional[str] = Field(default=None, max_length=255, nullable=True)
+
+class GroupEvent(SQLModel, table=True):
+    """跨群讨论中的规范事件及其当前分析/立场状态。"""
+
+    __tablename__ = "group_events"  # type: ignore
+    __table_args__ = (Index("ix_group_events_scope_status", "platform", "account_id", "scope", "status"),)
+
+    event_id: str = Field(primary_key=True, max_length=64)
+    canonical_event_id: Optional[str] = Field(default=None, index=True, max_length=64, nullable=True)
+    recurrence_of_event_id: Optional[str] = Field(default=None, index=True, max_length=64, nullable=True)
+    platform: str = Field(index=True, max_length=100)
+    account_id: Optional[str] = Field(default=None, index=True, max_length=255, nullable=True)
+    scope: Optional[str] = Field(default=None, index=True, max_length=255, nullable=True)
+    status: str = Field(default="collecting", index=True, max_length=32)
+    title: str = Field(default="", max_length=500)
+    root_cause: str = Field(default="", sa_column=Column(Text, nullable=False, server_default=""))
+    analysis_json: str = Field(default="{}", sa_column=Column(Text, nullable=False, server_default="{}"))
+    stance_type: str = Field(default="", max_length=32)
+    stance_summary: str = Field(default="", sa_column=Column(Text, nullable=False, server_default=""))
+    stance_reasoning: str = Field(default="", sa_column=Column(Text, nullable=False, server_default=""))
+    stance_confidence: float = Field(default=0.0, sa_column=Column(Float, nullable=False, server_default="0"))
+    created_at: datetime = Field(default_factory=datetime.now, sa_column=Column(DateTime, nullable=False))
+    updated_at: datetime = Field(default_factory=datetime.now, sa_column=Column(DateTime, nullable=False, index=True))
+    last_activity_at: datetime = Field(default_factory=datetime.now, sa_column=Column(DateTime, nullable=False, index=True))
+    last_material_activity_at: datetime = Field(default_factory=datetime.now, sa_column=Column(DateTime, nullable=False, index=True))
+    ready_at: Optional[datetime] = Field(default=None, sa_column=Column(DateTime, nullable=True))
+    closed_at: Optional[datetime] = Field(default=None, sa_column=Column(DateTime, nullable=True))
+
+
+class GroupEventGroup(SQLModel, table=True):
+    """记录加入规范事件的群聊流，供活动状态和只读来源展示使用。"""
+
+    __tablename__ = "group_event_groups"  # type: ignore
+    __table_args__ = (
+        UniqueConstraint("event_id", "session_id", name="uq_group_event_groups_event_session"),
+        Index("ix_group_event_groups_session", "session_id"),
+    )
+
+    id: Optional[int] = Field(default=None, primary_key=True)
+    event_id: str = Field(index=True, max_length=64)
+    session_id: str = Field(index=True, max_length=255)
+    group_id: str = Field(index=True, max_length=255)
+    group_name: str = Field(default="", max_length=255)
+    first_activity_at: datetime = Field(default_factory=datetime.now, sa_column=Column(DateTime, nullable=False))
+    last_activity_at: datetime = Field(default_factory=datetime.now, sa_column=Column(DateTime, nullable=False, index=True))
+
+
+class GroupEventSource(SQLModel, table=True):
+    """独立保存事件证据的文本快照与原始消息引用；不复制媒体二进制。"""
+
+    __tablename__ = "group_event_sources"  # type: ignore
+    __table_args__ = (
+        UniqueConstraint("event_id", "session_id", "message_id", name="uq_group_event_sources_message"),
+        Index("ix_group_event_sources_event_time", "event_id", "timestamp"),
+    )
+
+    id: Optional[int] = Field(default=None, primary_key=True)
+    event_id: str = Field(index=True, max_length=64)
+    session_id: str = Field(index=True, max_length=255)
+    platform: str = Field(max_length=100)
+    account_id: Optional[str] = Field(default=None, max_length=255, nullable=True)
+    scope: Optional[str] = Field(default=None, max_length=255, nullable=True)
+    group_id: str = Field(index=True, max_length=255)
+    message_id: str = Field(index=True, max_length=255)
+    timestamp: datetime = Field(sa_column=Column(DateTime, index=True, nullable=False))
+    speaker_key: str = Field(max_length=64)
+    text_snapshot: str = Field(sa_column=Column(Text, nullable=False))
