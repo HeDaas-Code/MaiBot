@@ -85,6 +85,8 @@
       "mcpSettings": "MCP 設定",
       "dataTransfer": "データ管理",
       "statistics": "詳細統計データ",
+      "groupEvents": "グループイベント",
+      "groupEventsDesc": "グループイベントの記録と暫定的な立場を表示",
       "replyEffects": "返信効果",
       "logViewer": "ログビューア",
       "reasoningProcess": "推論プロセス",
@@ -92,6 +94,25 @@
       "localChat": "ローカルチャット",
       "settings": "WebUI 設定"
     }
+  },
+  "groupEvents": {
+    "title": "グループイベント",
+    "description": "グループチャットから整理したイベント記録と暫定的な立場。",
+    "refresh": "更新",
+    "loading": "読み込み中…",
+    "empty": "イベント記録はありません",
+    "loadFailed": "イベントの読み込みに失敗しました",
+    "noStance": "立場なし",
+    "sourceCount": "ソースメッセージ {{count}} 件",
+    "groups": "関連グループ {{count}} 件",
+    "rootCause": "原因",
+    "pending": "分析待ち",
+    "stance": "暫定的な立場",
+    "viewpoints": "観点",
+    "timeline": "タイムライン",
+    "sources": "ソース証拠",
+    "groupId": "グループID",
+    "sourceId": "メッセージID"
   },
   "statisticsPage": {
     "title": "詳細統計データ",

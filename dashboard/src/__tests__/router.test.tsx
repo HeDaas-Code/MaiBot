@@ -44,6 +44,7 @@ vi.mock('@/routes/logs', () => ({
   StatisticsLogViewerPage: StubPage,
 }))
 vi.mock('@/routes/reply-effects', () => ({ ReplyEffectsPage: StubPage }))
+vi.mock('@/routes/group-events', () => ({ GroupEventsPage: StubPage }))
 vi.mock('@/routes/config/bot', () => ({ BotConfigPage: StubPage }))
 vi.mock('@/routes/config/model', () => ({ ModelConfigPage: StubPage }))
 vi.mock('@/routes/config/prompts', () => ({ PromptManagementPage: StubPage }))
@@ -56,6 +57,7 @@ vi.mock('@/routes/resource/knowledge-base', () => ({ KnowledgeBasePage: StubPage
 vi.mock('@/routes/monitor/index.tsx', () => ({ PlannerMonitorPage: StubPage }))
 vi.mock('@/routes/chat/index', () => ({ ChatPage: StubPage }))
 vi.mock('@/routes/chat-management', () => ({ ChatManagementPage: StubPage }))
+vi.mock('@/routes/manage', () => ({ ManagePage: StubPage }))
 vi.mock('@/routes/chat/embed', () => ({ ChatEmbedPage: StubPage }))
 vi.mock('@/routes/plugins/embed', () => ({ PluginMarketplaceEmbedPage: StubPage }))
 vi.mock('@/routes/plugins/PluginMarketplacePage', () => ({ PluginMarketplacePage: StubPage }))
@@ -83,6 +85,7 @@ const expectedPaths = [
   '/',
   '/statistics',
   '/reply-effects',
+  '/group-events',
   '/config/bot',
   '/config/model',
   '/config/prompts',
@@ -102,6 +105,7 @@ const expectedPaths = [
   '/mcp-settings',
   '/data-transfer',
   '/logs',
+  '/manage',
   '/reasoning-process',
   '/planner-monitor',
   '/chat-management',

@@ -121,6 +121,9 @@ class MainSystem:
         """初始化其他组件"""
         init_start_time = time.time()
 
+        from src.services.group_event_service import get_group_event_service
+
+        get_group_event_service().start()
         await config_manager.start_file_watcher()
 
         # 插件 Runner 启动最重，尽早发起以便和后续初始化并行。
@@ -140,8 +143,6 @@ class MainSystem:
 
         a_memorix_host_service.register_config_reload_callback()
         get_mcp_service().register_config_reload_callback()
-        expression_vector_service.start()
-        a_memorix_task = asyncio.create_task(a_memorix_host_service.start(), name="a_memorix_start")
 
         await asyncio.sleep(0)
         prompt_manager.load_prompts()
@@ -154,19 +155,26 @@ class MainSystem:
         # start_api_server()
         # logger.info("API服务器启动成功")
 
+        a_memorix_task: asyncio.Task[None] | None = None
         try:
-            await asyncio.gather(plugin_runtime_task, a_memorix_task)
+            # A_Memorix 的启动自检会立即发起 Embedding probe；必须等插件 Runner
+            # 完成 Provider 注册后再启动，否则会把正常的本地 Provider 误判为未注册。
+            await plugin_runtime_task
+
+            # 嵌入 Provider 可由插件注册；先等插件 Runner 完成加载和注册，再触发表达向量历史补建。
+            expression_vector_service.start()
+
+            a_memorix_task = asyncio.create_task(a_memorix_host_service.start(), name="a_memorix_start")
+            await a_memorix_task
             await emoji_load_task
         except Exception:
-            for task in (plugin_runtime_task, a_memorix_task, emoji_load_task):
+            tasks_to_cancel = [plugin_runtime_task, emoji_load_task]
+            if a_memorix_task is not None:
+                tasks_to_cancel.append(a_memorix_task)
+            for task in tasks_to_cancel:
                 if not task.done():
                     task.cancel()
-            await asyncio.gather(
-                plugin_runtime_task,
-                a_memorix_task,
-                emoji_load_task,
-                return_exceptions=True,
-            )
+            await asyncio.gather(*tasks_to_cancel, return_exceptions=True)
             raise
 
         # 初始化表情管理器
@@ -281,11 +289,13 @@ async def main() -> None:
         from src.mcp_module.service import get_mcp_service
         from src.plugin_runtime.integration import get_plugin_runtime_manager
         from src.services.expression_vector_service import expression_vector_service
+        from src.services.group_event_service import get_group_event_service
         from src.services.memory_flow_service import memory_automation_service
 
         emoji_manager.shutdown()
         await image_manager.shutdown()
         await expression_vector_service.stop()
+        await get_group_event_service().stop()
         await memory_automation_service.shutdown()
         await a_memorix_host_service.stop()
         await get_plugin_runtime_manager().bridge_event("on_stop")

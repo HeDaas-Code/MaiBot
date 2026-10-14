@@ -11,6 +11,8 @@ from src.llm_models.payload_content.tool_option import ToolDefinitionInput
 from src.maisaka.focus import focus_mode_manager
 
 from .context import BuiltinToolRuntimeContext
+from .confirm_event_stance import get_tool_spec as get_confirm_event_stance_tool_spec
+from .confirm_event_stance import handle_tool as handle_confirm_event_stance_tool
 from .fetch_history import get_tool_spec as get_fetch_history_tool_spec
 from .fetch_history import handle_tool as handle_fetch_history_tool
 from .query_memory import get_tool_spec as get_query_memory_tool_spec
@@ -93,6 +95,7 @@ def _get_query_image_memory_tool_spec() -> ToolSpec:
 BUILTIN_TOOL_ENTRIES: List[BuiltinToolEntry] = [
     BuiltinToolEntry("wait", get_wait_tool_spec, handle_wait_tool, stage="both"),
     BuiltinToolEntry("reply", get_reply_tool_spec, handle_reply_tool, stage="action"),
+    BuiltinToolEntry("confirm_event_stance", get_confirm_event_stance_tool_spec, handle_confirm_event_stance_tool, stage="action"),
     BuiltinToolEntry(
         "view_forward_message",
         get_view_forward_message_tool_spec,

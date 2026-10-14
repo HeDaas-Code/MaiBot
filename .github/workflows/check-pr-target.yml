@@ -1,0 +1,42 @@
+name: Check PR Target
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+
+permissions:
+  contents: read
+  issues: write
+  pull-requests: write
+
+jobs:
+  check-target:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check PR base repository
+        run: |
+          echo "Base repository: ${{ github.event.pull_request.base.repo.full_name }}"
+          echo "Head repository: ${{ github.event.pull_request.head.repo.full_name }}"
+          
+          # 检查是否向本仓库提交
+          if [ "${{ github.event.pull_request.base.repo.full_name }}" != "HeDaas-Code/MaiBot" ]; then
+            echo "❌ 错误：这个 PR 的目标仓库不是 HeDaas-Code/MaiBot"
+            echo "本项目是独立维护的分支，不向上游提交 PR"
+            echo "如果你想向上游贡献，请访问: https://github.com/MaiM-with-u/MaiBot"
+            exit 1
+          fi
+          
+          echo "✅ PR 目标仓库正确"
+
+      - name: Comment on PR
+        if: github.event.action == 'opened'
+        continue-on-error: true
+        uses: actions/github-script@v7
+        with:
+          script: |
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: '👋 感谢你的贡献！\n\n请确认：\n- ✅ 这个 PR 是提交到 `HeDaas-Code/MaiBot`（本仓库）\n- ❌ **不要**向 `MaiM-with-u/MaiBot`（上游）提交 PR\n\n本项目是独立维护的分支。如需向上游贡献，请访问 [上游仓库](https://github.com/MaiM-with-u/MaiBot)。'
+            })

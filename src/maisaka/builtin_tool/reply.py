@@ -367,6 +367,22 @@ async def handle_tool(
         return tool_ctx.build_failure_result(
             invocation.tool_name, "新表情包发送逻辑未开启，请使用 send_emoji 工具。"
         )
+    from src.services.group_event_service import get_group_event_service
+
+    related_event_contexts = await get_group_event_service().get_contexts_for_source(
+        tool_ctx.runtime.session_id,
+        target_message_id,
+    )
+    pending_confirmation = [
+        event for event in related_event_contexts if event.status in {"ready_for_stance", "reviewing"}
+    ]
+    if pending_confirmation:
+        event_ids = ", ".join(event.event_id for event in pending_confirmation)
+        return tool_ctx.build_failure_result(
+            invocation.tool_name,
+            f"相关事件 {event_ids} 必须先调用 confirm_event_stance 确认立场或 neutral 回退，再生成回复。",
+        )
+
     reply_tool_args = {
         key: value
         for key, value in invocation_arguments.items()
@@ -468,6 +484,14 @@ async def handle_tool(
         )
 
     reply_text = reply_result.completion.response_text.strip() if success else ""
+    if reply_text:
+        from src.services.group_event_service import get_group_event_service
+
+        reply_text = await get_group_event_service().guard_neutral_reply(
+            tool_ctx.runtime.session_id,
+            reply_text,
+            target_message_id,
+        )
 
     if not reply_text:
         reply_result.monitor_detail = build_reply_monitor_detail(reply_result)

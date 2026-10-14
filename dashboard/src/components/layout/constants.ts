@@ -121,6 +121,7 @@ export const menuSections: MenuSection[] = [
         path: '/reply-effects',
         featureFlag: 'replyEffects',
       },
+      { icon: ReplyEffectsIcon, label: 'sidebar.menu.groupEvents', path: '/group-events' },
       {
         icon: DataTransferIcon,
         label: 'sidebar.menu.dataTransfer',

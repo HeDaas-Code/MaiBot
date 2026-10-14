@@ -38,7 +38,7 @@ def test_upgrade_reclaims_disk_space_and_runs_once(tmp_path: Path, journal_mode:
     manager = DatabaseMigrationManager(engine, registry=build_default_migration_registry())
     manager.migrate()
     with engine.connect() as connection:
-        assert connection.exec_driver_sql("PRAGMA user_version").scalar_one() == 43
+        assert connection.exec_driver_sql("PRAGMA user_version").scalar_one() == 45
         assert connection.exec_driver_sql("PRAGMA freelist_count").scalar_one() == 0
         assert connection.exec_driver_sql("PRAGMA integrity_check").scalar_one() == "ok"
         assert connection.exec_driver_sql("SELECT * FROM mai_messages").fetchall() == [(1, "保留聊天内容")]
@@ -64,5 +64,5 @@ def test_vacuum_failure_does_not_mark_migration_complete(tmp_path: Path) -> None
         manager.migrate()
     with engine.connect() as connection:
         assert connection.exec_driver_sql("PRAGMA user_version").scalar_one() == 42
-    assert manager.plan().step_count() == 1
+    assert manager.plan().step_count() == 3
     engine.dispose()

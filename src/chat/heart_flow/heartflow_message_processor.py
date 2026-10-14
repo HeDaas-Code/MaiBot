@@ -1,5 +1,6 @@
 from typing import TYPE_CHECKING
 
+import asyncio
 import traceback
 
 from src.chat.heart_flow.heartflow_manager import heartflow_manager
@@ -60,8 +61,10 @@ class HeartFCMessageReceiver:
             await MessageUtils.store_message_to_db_async(message)  # 存储消息到数据库
             if chat is not None:
                 await chat.register_message(message)
+            from src.services.group_event_service import get_group_event_service
             from src.services.memory_flow_service import memory_automation_service
 
+            asyncio.create_task(get_group_event_service().observe_message(message), name="group_event_observe")
             await memory_automation_service.on_incoming_message(message)
 
             # 3. 日志记录

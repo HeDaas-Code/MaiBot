@@ -85,6 +85,8 @@
       "mcpSettings": "MCP Settings",
       "dataTransfer": "Data Management",
       "statistics": "Detailed Statistics",
+      "groupEvents": "Group Events",
+      "groupEventsDesc": "Browse group event archives and temporary stances",
       "replyEffects": "Reply Effects",
       "logViewer": "Log Viewer",
       "reasoningProcess": "Reasoning Process",
@@ -92,6 +94,25 @@
       "localChat": "Local Chat",
       "settings": "WebUI Settings"
     }
+  },
+  "groupEvents": {
+    "title": "Group Events",
+    "description": "Event archives and temporary stances extracted from group discussions.",
+    "refresh": "Refresh",
+    "loading": "Loading…",
+    "empty": "No event archives",
+    "loadFailed": "Failed to load events",
+    "noStance": "No stance",
+    "sourceCount": "{{count}} source messages",
+    "groups": "{{count}} groups",
+    "rootCause": "Root cause",
+    "pending": "Pending analysis",
+    "stance": "Temporary stance",
+    "viewpoints": "Viewpoints",
+    "timeline": "Timeline",
+    "sources": "Source evidence",
+    "groupId": "Group ID",
+    "sourceId": "Message ID"
   },
   "statisticsPage": {
     "title": "Detailed Statistics",
